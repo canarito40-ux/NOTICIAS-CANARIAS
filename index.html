@@ -96,22 +96,37 @@
 
         // Variables globales proporcionadas por el entorno
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
         // Inicializar Firebase
         let app, auth, db;
         try {
+            // Verificar si la configuración global está disponible y es válida
+            let firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+            
+            // Si la configuración no está disponible, mostrar un mensaje de error y deshabilitar la funcionalidad
+            if (!firebaseConfig || Object.keys(firebaseConfig).length === 0) {
+                console.error("Error: La configuración de Firebase no se encontró. La aplicación no podrá usar la base de datos.");
+                document.getElementById('statusMessage').textContent = 'Error: La base de datos no está configurada correctamente.';
+                document.getElementById('statusMessage').classList.remove('hidden');
+                document.getElementById('generateBtn').disabled = true;
+                // Salir de la función para evitar más errores
+                throw new Error("Missing Firebase config");
+            }
+
             app = initializeApp(firebaseConfig);
             auth = getAuth(app);
             db = getFirestore(app);
         } catch (error) {
             console.error("Error al inicializar Firebase:", error);
-            document.getElementById('statusMessage').textContent = 'Error al inicializar la base de datos. Por favor, inténtelo de nuevo.';
-            document.getElementById('statusMessage').classList.remove('hidden');
-            document.getElementById('generateBtn').disabled = true;
+            // Si el error ya fue manejado arriba, no sobrescribir el mensaje
+            if (error.message !== "Missing Firebase config") {
+                document.getElementById('statusMessage').textContent = 'Error al inicializar la base de datos. Por favor, inténtelo de nuevo.';
+                document.getElementById('statusMessage').classList.remove('hidden');
+                document.getElementById('generateBtn').disabled = true;
+            }
         }
-
+        
         const newsCollection = collection(db, `/artifacts/${appId}/public/data/news`);
 
         // Elementos del DOM
@@ -252,5 +267,4 @@
         });
     </script>
 </body>
-    Actualizado el código de la noticia
 </html>
