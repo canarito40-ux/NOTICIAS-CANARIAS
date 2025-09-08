@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Noticias Deportivas Canarias</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #ffffff;
+    color: #1f2937;
+}
+</style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+<header class="bg-[#003366] text-white p-4 shadow-lg">
+    <div class="container mx-auto flex flex-col sm:flex-row items-center justify-between">
+        <div class="flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-8 w-8 text-[#FFCC00] mr-2">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM10 17l-5-5 5-5v3h4v4h-4v3z"/>
+            </svg>
+            <h1 class="text-3xl font-bold tracking-tight">Deportes Canarias IA</h1>
+        </div>
+        <nav class="mt-2 sm:mt-0">
+            <a href="#noticias" class="text-gray-300 hover:text-white mx-2 sm:mx-4 transition-colors duration-300">Noticias</a>
+        </nav>
+    </div>
+</header>
+
+<main class="container mx-auto p-4 flex-grow grid grid-cols-1 md:grid-cols-3 gap-6">
+
+<!-- Formulario -->
+<div class="col-span-1 bg-white p-6 rounded-xl shadow-lg h-fit sticky top-4">
+    <h2 class="text-2xl font-semibold mb-4">Generar Nueva Noticia</h2>
+    <div class="mb-4">
+        <label for="topic" class="block text-sm font-medium text-gray-700">Selecciona un tema:</label>
+        <select id="topic" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#003366] focus:ring-[#003366] p-2 border">
+            <option value="UD Las Palmas">UD Las Palmas</option>
+            <option value="CD Tenerife">CD Tenerife</option>
+            <option value="Baloncesto Canarias (Lenovo Tenerife)">Baloncesto Canarias (Lenovo Tenerife)</option>
+            <option value="CB Gran Canaria (Dreamland)">CB Gran Canaria (Dreamland)</option>
+            <option value="Deporte Femenino en Canarias">Deporte Femenino en Canarias</option>
+            <option value="Atletismo Canario">Atletismo Canario</option>
+        </select>
+    </div>
+    <button id="generateBtn" class="w-full bg-[#FFCC00] hover:bg-[#FFD700] text-black font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-300">
+        Generar Noticia con IA
+    </button>
+    <div id="loading" class="mt-4 text-center text-gray-500 hidden">Generando contenido...</div>
+    <div id="statusMessage" class="mt-4 text-center text-red-500 hidden"></div>
+    <p class="text-xs text-gray-500 mt-4 text-center">
+        ID de Usuario: <span id="userIdDisplay" class="font-mono break-words">Cargando...</span>
+    </p>
+</div>
+
+<!-- Noticias -->
+<div class="col-span-1 md:col-span-2">
+    <h2 id="noticias" class="text-3xl font-bold mb-6">Últimas Noticias</h2>
+    <div id="news-container" class="space-y-6">
+        <div id="loading-initial" class="flex justify-center items-center h-48">
+            <p class="ml-4 text-lg text-gray-600">Cargando noticias...</p>
+        </div>
+    </div>
+</div>
+
+</main>
+
+<footer class="bg-[#003366] text-gray-400 text-center p-4 mt-6">
+    <p class="text-sm">&copy; 2025 Noticias Deportivas Canarias IA. Contenido generado con criterio propio.</p>
+</footer>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, collection, onSnapshot, addDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+// 🔹 Configuración Firebase
+const firebaseConfig = {
+  apiKey: "AIzaSyAHlZMd4wxBMOsPM4D7C73J8dcMrSpXz7Q",
+  authDomain: "noticias-canarias.firebaseapp.com",
+  projectId: "noticias-canarias",
+  storageBucket: "noticias-canarias.appspot.com",
+  messagingSenderId: "951454557074",
+  appId: "1:951454557074:web:a357d90c47eeaeca0e174b",
+  measurementId: "G-36XGZ2DP32"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const newsCollection = collection(db, "news");
+
+// Elementos DOM
+const generateBtn = document.getElementById('generateBtn');
+const loadingDiv = document.getElementById('loading');
+const statusMessage = document.getElementById('statusMessage');
+const newsContainer = document.getElementById('news-container');
+const topicSelect = document.getElementById('topic');
+const userIdDisplay = document.getElementById('userIdDisplay');
+const loadingInitial = document.getElementById('loading-initial');
+
+// Render noticias
+const renderNews = (news) => {
+    newsContainer.innerHTML = '';
+    const sortedNews = news.sort((a,b)=> (b.data().timestamp?.seconds || 0) - (a.data().timestamp?.seconds || 0));
+    if(sortedNews.length===0){
+        newsContainer.innerHTML='<p class="text-center text-gray-500 text-lg">No hay noticias todavía. ¡Genera la primera!</p>';
+    }
+    sortedNews.forEach(doc=>{
+        const article=doc.data();
+        const newsCard=document.createElement('div');
+        newsCard.className='bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300';
+        const dateText=article.timestamp ? new Date(article.timestamp.seconds*1000).toLocaleString('es-ES') : 'Cargando fecha...';
+        newsCard.innerHTML=`
+            <h3 class="text-xl font-bold text-gray-900 mb-2">${article.title}</h3>
+            <p class="text-sm text-gray-500 mb-4">${dateText}</p>
+            <p class="text-gray-700">${article.content}</p>
+        `;
+        newsContainer.appendChild(newsCard);
+    });
+};
+
+// Autenticación anónima y escucha de Firestore
+onAuthStateChanged(auth, async (user)=>{
+    if(!user){
+        await signInAnonymously(auth);
+        return;
+    }
+    userIdDisplay.textContent=user.uid;
+    const q=query(newsCollection, orderBy('timestamp','desc'));
+    onSnapshot(q,(snapshot)=>{
+        loadingInitial.classList.add('hidden');
+        renderNews(snapshot.docs);
+    },(error)=>{
+        console.error("Error al obtener noticias:",error);
+        newsContainer.innerHTML=`<p class="text-center text-red-500">Error al cargar noticias: ${error.message}</p>`;
+    });
+});
+
+// Botón generar noticia (simulada)
+generateBtn.addEventListener('click',async()=>{
+    const topic=topicSelect.value;
+    loadingDiv.classList.remove('hidden');
+    generateBtn.disabled=true;
+    statusMessage.classList.add('hidden');
+    try{
+        // Simulamos noticia
+        const title=`Noticia de ${topic}`;
+        const content=`Contenido de prueba sobre ${topic} generado automáticamente.`;
+        await addDoc(newsCollection,{
+            title,
+            content,
+            timestamp:serverTimestamp(),
+            topic,
+            userId:auth.currentUser.uid
+        });
+    }catch(e){
+        console.error(e);
+        statusMessage.textContent='Error al generar la noticia.';
+        statusMessage.classList.remove('hidden');
+    }finally{
+        loadingDiv.classList.add('hidden');
+        generateBtn.disabled=false;
+    }
+});
+</script>
+
+</body>
+</html>
