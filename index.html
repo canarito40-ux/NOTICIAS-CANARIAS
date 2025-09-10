@@ -20,6 +20,7 @@
     <header class="bg-[#003366] text-white p-4 shadow-lg">
         <div class="container mx-auto flex flex-col sm:flex-row items-center justify-between">
             <div class="flex items-center">
+                <!-- Icono -->
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-8 w-8 text-[#FFCC00] mr-2">
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM10 17l-5-5 5-5v3h4v4h-4v3z"/>
                 </svg>
@@ -33,7 +34,6 @@
 
     <!-- Contenido principal -->
     <main class="container mx-auto p-4 flex-grow grid grid-cols-1 md:grid-cols-3 gap-6">
-
         <!-- Formulario -->
         <div class="col-span-1 bg-white p-6 rounded-xl shadow-lg h-fit sticky top-4">
             <h2 class="text-2xl font-semibold mb-4">Generar Nueva Noticia</h2>
@@ -42,20 +42,17 @@
                 <select id="topic" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#003366] focus:ring-[#003366] p-2 border">
                     <option value="UD Las Palmas">UD Las Palmas</option>
                     <option value="CD Tenerife">CD Tenerife</option>
-                    <option value="Baloncesto Canarias (Lenovo Tenerife)">Baloncesto Canarias</option>
-                    <option value="CB Gran Canaria (Dreamland)">CB Gran Canaria</option>
-                    <option value="Deporte Femenino en Canarias">Deporte Femenino</option>
+                    <option value="Baloncesto Canarias (Lenovo Tenerife)">Baloncesto Canarias (Lenovo Tenerife)</option>
+                    <option value="CB Gran Canaria (Dreamland)">CB Gran Canaria (Dreamland)</option>
+                    <option value="Deporte Femenino en Canarias">Deporte Femenino en Canarias</option>
                     <option value="Atletismo Canario">Atletismo Canario</option>
                 </select>
             </div>
             <button id="generateBtn" class="w-full bg-[#FFCC00] hover:bg-[#FFD700] text-black font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-300">
-                Generar Noticia
+                Generar Noticia con IA
             </button>
             <div id="loading" class="mt-4 text-center text-gray-500 hidden">Generando contenido...</div>
             <div id="statusMessage" class="mt-4 text-center text-red-500 hidden"></div>
-            <p class="text-xs text-gray-500 mt-4 text-center">
-                ID de Usuario: <span id="userIdDisplay" class="font-mono break-words">Cargando...</span>
-            </p>
         </div>
 
         <!-- Noticias -->
@@ -67,117 +64,57 @@
                 </div>
             </div>
         </div>
-
     </main>
 
+    <!-- Pie -->
     <footer class="bg-[#003366] text-gray-400 text-center p-4 mt-6">
-        <p class="text-sm">&copy; 2025 Noticias Deportivas Canarias IA.</p>
+        <p class="text-sm">&copy; 2025 Noticias Deportivas Canarias IA. Contenido generado con criterio propio.</p>
     </footer>
 
-    <!-- Firebase SDK -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, addDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <!-- Lógica JS para consumir tu servidor Node -->
+    <script>
+        const SERVER_URL = "https://noticias-canarias-hjq3g6zbt-canaritos-projects.vercel.app";
 
-        // Tu configuración de Firebase
-        const firebaseConfig = {
-            apiKey: "AIzaSyAHlZMd4wxBMOsPM4D7C73J8dcMrSpXz7Q",
-            authDomain: "noticias-canarias.firebaseapp.com",
-            projectId: "noticias-canarias",
-            storageBucket: "noticias-canarias.appspot.com",
-            messagingSenderId: "951454557074",
-            appId: "1:951454557074:web:a357d90c47eeaeca0e174b",
-            measurementId: "G-36XGZ2DP32"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const newsCollection = collection(db, "news");
-
-        // DOM
         const generateBtn = document.getElementById('generateBtn');
         const loadingDiv = document.getElementById('loading');
         const statusMessage = document.getElementById('statusMessage');
         const newsContainer = document.getElementById('news-container');
         const topicSelect = document.getElementById('topic');
-        const userIdDisplay = document.getElementById('userIdDisplay');
         const loadingInitial = document.getElementById('loading-initial');
 
-        // Render noticias
-        const renderNews = (news) => {
-            newsContainer.innerHTML = '';
-            const sortedNews = news.sort((a, b) => (b.data().timestamp?.seconds || 0) - (a.data().timestamp?.seconds || 0));
-            if (sortedNews.length === 0) {
-                newsContainer.innerHTML = '<p class="text-center text-gray-500 text-lg">No hay noticias todavía.</p>';
-            }
-            sortedNews.forEach(doc => {
-                const article = doc.data();
-                const dateText = article.timestamp ? new Date(article.timestamp.seconds * 1000).toLocaleString('es-ES') : 'Cargando fecha...';
+        async function generateNews(topic) {
+            loadingDiv.classList.remove('hidden');
+            statusMessage.classList.add('hidden');
+            try {
+                const response = await fetch(`${SERVER_URL}/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ topic })
+                });
+
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+
                 const newsCard = document.createElement('div');
                 newsCard.className = 'bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300';
                 newsCard.innerHTML = `
-                    <h3 class="text-xl font-bold mb-2">${article.title}</h3>
-                    <p class="text-sm text-gray-500 mb-4">${dateText}</p>
-                    <p>${article.content}</p>
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">${topic}</h3>
+                    <p class="text-gray-700">${data.news}</p>
                 `;
-                newsContainer.appendChild(newsCard);
-            });
-        };
+                newsContainer.prepend(newsCard);
 
-        // Generar noticia de prueba
-        const generateNews = async (topic, userId) => {
-            loadingDiv.classList.remove('hidden');
-            generateBtn.disabled = true;
-            statusMessage.classList.add('hidden');
-
-            try {
-                const title = `Noticia de ${topic}`;
-                const content = `Contenido de prueba sobre ${topic} generado automáticamente.`;
-
-                await addDoc(newsCollection, {
-                    title,
-                    content,
-                    topic,
-                    timestamp: serverTimestamp(),
-                    userId
-                });
-            } catch (err) {
-                statusMessage.textContent = 'Error al generar la noticia.';
+            } catch (error) {
+                statusMessage.textContent = 'Error al generar la noticia: ' + error.message;
                 statusMessage.classList.remove('hidden');
             } finally {
                 loadingDiv.classList.add('hidden');
-                generateBtn.disabled = false;
             }
-        };
+        }
 
-        // Autenticación anónima
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                const userId = user.uid;
-                userIdDisplay.textContent = userId;
-
-                // Escuchar noticias en tiempo real
-                const q = query(newsCollection, orderBy('timestamp', 'desc'));
-                onSnapshot(q, snapshot => {
-                    loadingInitial.classList.add('hidden');
-                    renderNews(snapshot.docs);
-                }, err => {
-                    newsContainer.innerHTML = `<p class="text-red-500 text-center">Error cargando noticias: ${err.message}</p>`;
-                });
-
-                // Botón generar noticia
-                generateBtn.onclick = () => generateNews(topicSelect.value, userId);
-            } else {
-                signInAnonymously(auth).catch(err => {
-                    statusMessage.textContent = 'Error de autenticación: ' + err.message;
-                    statusMessage.classList.remove('hidden');
-                });
-            }
+        generateBtn.addEventListener('click', () => {
+            const topic = topicSelect.value;
+            generateNews(topic);
         });
-
     </script>
-
 </body>
 </html>
