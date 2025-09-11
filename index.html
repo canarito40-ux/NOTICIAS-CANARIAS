@@ -4,38 +4,100 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Noticias Canarias</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #2a5298, #1e3c72);
+      color: #333;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .container {
+      background: #fff;
+      padding: 2rem;
+      border-radius: 16px;
+      box-shadow: 0px 6px 20px rgba(0,0,0,0.2);
+      max-width: 600px;
+      width: 100%;
+      text-align: center;
+      animation: fadeIn 1s ease-in-out;
+    }
+
+    h1 {
+      color: #1e3c72;
+      margin-bottom: 1rem;
+    }
+
+    input {
+      width: 80%;
+      padding: 10px;
+      margin: 10px 0;
+      border: 2px solid #1e3c72;
+      border-radius: 8px;
+      outline: none;
+      font-size: 16px;
+    }
+
+    button {
+      background: #2a5298;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background: #1e3c72;
+    }
+
+    .news {
+      margin-top: 20px;
+      padding: 1rem;
+      background: #f4f6fb;
+      border-left: 5px solid #2a5298;
+      border-radius: 8px;
+      text-align: left;
+      line-height: 1.5;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
 </head>
-<body class="bg-gray-100 text-gray-900">
-  <div class="container mx-auto p-6">
-    <h1 class="text-3xl font-bold mb-4 text-center">📰 Noticias Canarias</h1>
-
-    <div class="mb-6 text-center">
-      <input id="topicInput" type="text" placeholder="Escribe un tema (ej. UD Las Palmas)" 
-             class="p-2 border rounded w-2/3">
-      <button id="generateBtn" class="ml-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-        Generar Noticia
-      </button>
-    </div>
-
-    <div id="newsContainer" class="space-y-4"></div>
+<body>
+  <div class="container">
+    <h1>📰 Noticias Canarias</h1>
+    <p>Escribe un tema y genera una noticia deportiva automáticamente.</p>
+    <input type="text" id="topic" placeholder="Ej: UD Las Palmas, CD Tenerife...">
+    <br>
+    <button onclick="generateNews()">Generar noticia</button>
+    <div id="news" class="news" style="display: none;"></div>
   </div>
 
   <script>
-    const SERVER_URL = "https://noticias-canarias-hjq3g6zbt-canaritos-projects.vercel.app";
+    async function generateNews() {
+      const topic = document.getElementById("topic").value;
+      const newsDiv = document.getElementById("news");
 
-    document.getElementById("generateBtn").addEventListener("click", async () => {
-      const topic = document.getElementById("topicInput").value.trim();
       if (!topic) {
-        alert("Por favor escribe un tema.");
+        alert("Por favor, escribe un tema.");
         return;
       }
 
-      const container = document.getElementById("newsContainer");
-      container.innerHTML = "<p class='text-gray-500'>⏳ Generando noticia...</p>";
+      newsDiv.style.display = "block";
+      newsDiv.innerHTML = "⏳ Generando noticia...";
 
       try {
-        const response = await fetch(`${SERVER_URL}/generate`, {
+        const response = await fetch("/api/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ topic })
@@ -43,19 +105,15 @@
 
         const data = await response.json();
         if (data.news) {
-          container.innerHTML = `
-            <div class="p-4 bg-white shadow rounded">
-              <h2 class="text-xl font-semibold mb-2">${topic}</h2>
-              <p>${data.news}</p>
-            </div>`;
+          newsDiv.innerHTML = "✅ " + data.news;
         } else {
-          container.innerHTML = `<p class="text-red-600">⚠️ Error: no se pudo generar la noticia.</p>`;
+          newsDiv.innerHTML = "⚠️ No se pudo generar la noticia.";
         }
       } catch (error) {
         console.error(error);
-        container.innerHTML = `<p class="text-red-600">❌ Error al conectar con el servidor.</p>`;
+        newsDiv.innerHTML = "❌ Error al conectar con el servidor.";
       }
-    });
+    }
   </script>
 </body>
 </html>
